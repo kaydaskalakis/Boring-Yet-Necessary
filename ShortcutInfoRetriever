@@ -1,0 +1,39 @@
+# Define the path to the directory containing the shortcut files
+$path = "C:\ProgramData\Microsoft\Windows\Start Menu\Programs"
+
+# Create a WScript.Shell object
+$shell = New-Object -ComObject WScript.Shell
+
+# Get all shortcut files (with a .lnk file extension) in the specified directory path recursively
+# and pipe the output to the ForEach-Object loop
+Get-ChildItem $path -Filter "*.lnk" -Recurse | ForEach-Object {
+  # Assign the current file object to the $link variable
+  $link = $_
+  
+  # Create a shortcut object using the current file's full name
+  $shortcut = $shell.CreateShortcut($link.FullName)
+  
+  # Create a custom object that contains information about the shortcut
+  # Pipe the output to the Export-Csv cmdlet to write the information to a CSV file
+
+  [PSCustomObject]@{
+    Name = $link.Name
+    Path = $link.FullName
+    TargetPath = $shortcut.TargetPath
+    Arguments = $shortcut.Arguments
+    StartIn = $shortcut.WorkingDirectory
+    Description = $shortcut.Description
+  }
+} | Out-GridView | Export-Csv -Path "C:\ProgramData\Microsoft\Windows\StartMenuPrograms-Links.csv" -NoTypeInformation
+
+# Get all subdirectories in the specified path
+$folders = Get-ChildItem -Path $path -Directory
+
+# Iterate through each folder
+foreach ($folder in $folders) {
+  # Get the items in the folder, suppress errors if the folder is empty
+  if ((Get-ChildItem -Path $folder.FullName -Force -ErrorAction SilentlyContinue) -eq $null) {
+    # if the folder is empty, print the folder name
+    Write-Host "Folder $($folder.FullName) is empty" -ForegroundColor Red
+  }
+}
